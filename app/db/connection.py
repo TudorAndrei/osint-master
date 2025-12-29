@@ -1,6 +1,6 @@
 from falkordb import Graph
 from pydantic_settings import BaseSettings
-from redis import Redis
+from redis import ConnectionPool, Redis
 
 
 class Settings(BaseSettings):
@@ -8,36 +8,52 @@ class Settings(BaseSettings):
     falkordb_port: int = 6379
     falkordb_password: str | None = None
     graph_name: str = "osint"
+    connection_pool_size: int = 50
 
     class Config:
-        """Pydantic settings configuration."""
-
         env_file = ".env"
 
 
 settings = Settings()
-_redis_client: Redis | None = None
-_graph: Graph | None = None
+
+
+class ConnectionPoolManager:
+    def __init__(self) -> None:
+        self._pool: ConnectionPool | None = None
+
+    def init(self) -> None:
+        if self._pool is None:
+            self._pool = ConnectionPool(
+                host=settings.falkordb_host,
+                port=settings.falkordb_port,
+                password=settings.falkordb_password,
+                decode_responses=True,
+                max_connections=settings.connection_pool_size,
+            )
+
+    def close(self) -> None:
+        if self._pool:
+            self._pool.disconnect()
+            self._pool = None
+
+    def get_db(self) -> Graph:
+        if self._pool is None:
+            msg = "Connection pool not initialized. Call init_connection_pool() first."
+            raise RuntimeError(msg)
+        redis_client = Redis(connection_pool=self._pool)
+        return Graph(redis_client, settings.graph_name)
+
+
+_pool_manager = ConnectionPoolManager()
+
+
+def init_connection_pool() -> None:
+    _pool_manager.init()
+
+
+def close_connection_pool() -> None:
+    _pool_manager.close()
 
 
 def get_db() -> Graph:
-    """Get the database connection."""
-    global _graph, _redis_client
-    if _graph is None:
-        _redis_client = Redis(
-            host=settings.falkordb_host,
-            port=settings.falkordb_port,
-            password=settings.falkordb_password,
-            decode_responses=True,
-        )
-        _graph = Graph(_redis_client, settings.graph_name)
-    return _graph
-
-
-def close_db() -> None:
-    """Close the database connection."""
-    global _graph, _redis_client
-    if _redis_client:
-        _redis_client.close()
-        _redis_client = None
-        _graph = None
+    return _pool_manager.get_db()

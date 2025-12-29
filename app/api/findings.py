@@ -1,6 +1,7 @@
-"""Findings API endpoints."""
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from falkordb import Graph
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.db import (
     create_entity,
@@ -10,15 +11,16 @@ from app.db import (
     get_entity,
     update_entity,
 )
-from app.models import Finding, FindingCreate, FindingUpdate
+from app.models import Finding
 
 router = APIRouter()
 
 
 @router.post("", status_code=201)
-async def create_finding(finding: FindingCreate) -> Finding:
-    """Create a new finding."""
-    db = get_db()
+async def create_finding(
+    finding: Finding,
+    db: Annotated[Graph, Depends(get_db)],
+) -> Finding:
     finding_model = Finding(**finding.model_dump())
     entity_id = create_entity(db, "Finding", finding_model)
     created_entity = get_entity(db, "Finding", entity_id)
@@ -28,17 +30,18 @@ async def create_finding(finding: FindingCreate) -> Finding:
 
 
 @router.get("")
-async def list_findings() -> list[Finding]:
-    """List all findings."""
-    db = get_db()
+async def list_findings(
+    db: Annotated[Graph, Depends(get_db)],
+) -> list[Finding]:
     entities = get_entities_by_label(db, "Finding")
     return [Finding(**e) for e in entities]
 
 
 @router.get("/{finding_id}")
-async def get_finding(finding_id: str) -> Finding:
-    """Get a finding by ID."""
-    db = get_db()
+async def get_finding(
+    finding_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> Finding:
     entity = get_entity(db, "Finding", finding_id)
     if not entity:
         raise HTTPException(status_code=404, detail="Finding not found")
@@ -47,10 +50,10 @@ async def get_finding(finding_id: str) -> Finding:
 
 @router.put("/{finding_id}")
 async def update_finding(
-    finding_id: str, finding_update: FindingUpdate,
+    finding_id: str,
+    finding_update: Finding,
+    db: Annotated[Graph, Depends(get_db)],
 ) -> Finding:
-    """Update a finding."""
-    db = get_db()
     updates = finding_update.model_dump(exclude_none=True)
     entity = update_entity(db, "Finding", finding_id, updates)
     if not entity:
@@ -59,9 +62,10 @@ async def update_finding(
 
 
 @router.delete("/{finding_id}", status_code=204)
-async def delete_finding(finding_id: str) -> None:
-    """Delete a finding."""
-    db = get_db()
+async def delete_finding(
+    finding_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> None:
     deleted = delete_entity(db, "Finding", finding_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Finding not found")

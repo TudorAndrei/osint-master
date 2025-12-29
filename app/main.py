@@ -1,6 +1,9 @@
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from typing import Annotated
 
-from fastapi import FastAPI
+from falkordb import Graph  # pyright: ignore[reportMissingTypeStubs]
+from fastapi import Depends, FastAPI
 
 from app.api import (
     documents,
@@ -14,15 +17,14 @@ from app.api import (
     social_media_profiles,
     sources,
 )
-from app.db.connection import close_db, get_db
+from app.db.connection import close_connection_pool, get_db, init_connection_pool
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager."""
-    get_db()
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    init_connection_pool()
     yield
-    close_db()
+    close_connection_pool()
 
 
 app = FastAPI(
@@ -34,14 +36,20 @@ app = FastAPI(
 
 app.include_router(persons.router, prefix="/api/v1/persons", tags=["persons"])
 app.include_router(
-    organizations.router, prefix="/api/v1/organizations", tags=["organizations"],
+    organizations.router,
+    prefix="/api/v1/organizations",
+    tags=["organizations"],
 )
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
 app.include_router(
-    ip_addresses.router, prefix="/api/v1/ip-addresses", tags=["ip-addresses"],
+    ip_addresses.router,
+    prefix="/api/v1/ip-addresses",
+    tags=["ip-addresses"],
 )
 app.include_router(
-    email_addresses.router, prefix="/api/v1/email-addresses", tags=["email-addresses"],
+    email_addresses.router,
+    prefix="/api/v1/email-addresses",
+    tags=["email-addresses"],
 )
 app.include_router(
     social_media_profiles.router,
@@ -52,16 +60,19 @@ app.include_router(documents.router, prefix="/api/v1/documents", tags=["document
 app.include_router(findings.router, prefix="/api/v1/findings", tags=["findings"])
 app.include_router(sources.router, prefix="/api/v1/sources", tags=["sources"])
 app.include_router(
-    relationships.router, prefix="/api/v1/relationships", tags=["relationships"],
+    relationships.router,
+    prefix="/api/v1/relationships",
+    tags=["relationships"],
 )
 
 
 @app.get("/health")
-async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
+async def health_check(
+    db: Annotated[Graph, Depends(get_db)],
+) -> dict[str, str]:
     try:
-        db = get_db()
-        db.query("RETURN 1")
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
+        _ = db.query("RETURN 1")
+    except (ConnectionError, RuntimeError, ValueError) as e:
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+    else:
+        return {"status": "healthy", "database": "connected"}

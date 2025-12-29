@@ -1,6 +1,7 @@
-"""Organizations API endpoints."""
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from falkordb import Graph
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.db import (
     create_entity,
@@ -10,15 +11,16 @@ from app.db import (
     get_entity,
     update_entity,
 )
-from app.models import Organization, OrganizationCreate, OrganizationUpdate
+from app.models import Organization
 
 router = APIRouter()
 
 
 @router.post("", status_code=201)
-async def create_organization(organization: OrganizationCreate) -> Organization:
-    """Create a new organization."""
-    db = get_db()
+async def create_organization(
+    organization: Organization,
+    db: Annotated[Graph, Depends(get_db)],
+) -> Organization:
     org_model = Organization(**organization.model_dump())
     entity_id = create_entity(db, "Organization", org_model)
     created_entity = get_entity(db, "Organization", entity_id)
@@ -28,17 +30,18 @@ async def create_organization(organization: OrganizationCreate) -> Organization:
 
 
 @router.get("")
-async def list_organizations() -> list[Organization]:
-    """List all organizations."""
-    db = get_db()
+async def list_organizations(
+    db: Annotated[Graph, Depends(get_db)],
+) -> list[Organization]:
     entities = get_entities_by_label(db, "Organization")
     return [Organization(**e) for e in entities]
 
 
 @router.get("/{organization_id}")
-async def get_organization(organization_id: str) -> Organization:
-    """Get an organization by ID."""
-    db = get_db()
+async def get_organization(
+    organization_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> Organization:
     entity = get_entity(db, "Organization", organization_id)
     if not entity:
         raise HTTPException(status_code=404, detail="Organization not found")
@@ -47,10 +50,10 @@ async def get_organization(organization_id: str) -> Organization:
 
 @router.put("/{organization_id}")
 async def update_organization(
-    organization_id: str, organization_update: OrganizationUpdate,
+    organization_id: str,
+    organization_update: Organization,
+    db: Annotated[Graph, Depends(get_db)],
 ) -> Organization:
-    """Update an organization."""
-    db = get_db()
     updates = organization_update.model_dump(exclude_none=True)
     entity = update_entity(db, "Organization", organization_id, updates)
     if not entity:
@@ -59,9 +62,10 @@ async def update_organization(
 
 
 @router.delete("/{organization_id}", status_code=204)
-async def delete_organization(organization_id: str) -> None:
-    """Delete an organization."""
-    db = get_db()
+async def delete_organization(
+    organization_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> None:
     deleted = delete_entity(db, "Organization", organization_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Organization not found")

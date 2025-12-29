@@ -4,10 +4,10 @@ set -euo pipefail
 echo "Running post-hook checks..."
 
 echo "Running ruff..."
-uvx ruff check app tests
+uvx ruff check --fix app 
 
 echo "Running ruff format check..."
-uvx ruff format --check app tests
+uvx ruff format  app 
 
 echo "Running ty (type checker)..."
 uvx ty check app

@@ -1,6 +1,7 @@
-"""Email Addresses API endpoints."""
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from falkordb import Graph
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.db import (
     create_entity,
@@ -10,15 +11,16 @@ from app.db import (
     get_entity,
     update_entity,
 )
-from app.models import EmailAddress, EmailAddressCreate, EmailAddressUpdate
+from app.models import EmailAddress
 
 router = APIRouter()
 
 
 @router.post("", status_code=201)
-async def create_email_address(email_address: EmailAddressCreate) -> EmailAddress:
-    """Create a new email address."""
-    db = get_db()
+async def create_email_address(
+    email_address: EmailAddress,
+    db: Annotated[Graph, Depends(get_db)],
+) -> EmailAddress:
     email_model = EmailAddress(**email_address.model_dump())
     entity_id = create_entity(db, "EmailAddress", email_model)
     created_entity = get_entity(db, "EmailAddress", entity_id)
@@ -28,17 +30,18 @@ async def create_email_address(email_address: EmailAddressCreate) -> EmailAddres
 
 
 @router.get("")
-async def list_email_addresses() -> list[EmailAddress]:
-    """List all email addresses."""
-    db = get_db()
+async def list_email_addresses(
+    db: Annotated[Graph, Depends(get_db)],
+) -> list[EmailAddress]:
     entities = get_entities_by_label(db, "EmailAddress")
     return [EmailAddress(**e) for e in entities]
 
 
 @router.get("/{email_address_id}")
-async def get_email_address(email_address_id: str) -> EmailAddress:
-    """Get an email address by ID."""
-    db = get_db()
+async def get_email_address(
+    email_address_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> EmailAddress:
     entity = get_entity(db, "EmailAddress", email_address_id)
     if not entity:
         raise HTTPException(status_code=404, detail="EmailAddress not found")
@@ -47,10 +50,10 @@ async def get_email_address(email_address_id: str) -> EmailAddress:
 
 @router.put("/{email_address_id}")
 async def update_email_address(
-    email_address_id: str, email_address_update: EmailAddressUpdate,
+    email_address_id: str,
+    email_address_update: EmailAddress,
+    db: Annotated[Graph, Depends(get_db)],
 ) -> EmailAddress:
-    """Update an email address."""
-    db = get_db()
     updates = email_address_update.model_dump(exclude_none=True)
     entity = update_entity(db, "EmailAddress", email_address_id, updates)
     if not entity:
@@ -59,9 +62,10 @@ async def update_email_address(
 
 
 @router.delete("/{email_address_id}", status_code=204)
-async def delete_email_address(email_address_id: str) -> None:
-    """Delete an email address."""
-    db = get_db()
+async def delete_email_address(
+    email_address_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> None:
     deleted = delete_entity(db, "EmailAddress", email_address_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="EmailAddress not found")

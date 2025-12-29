@@ -1,18 +1,26 @@
+import json
 from datetime import UTC, datetime
 from typing import Any
+from uuid import uuid4
 
 from falkordb import Graph
 
-from app.models.base import BaseEntity
+from app.models.base import EntityMixin
 
 
-def create_entity(graph: Graph, label: str, entity: BaseEntity) -> str:
+class EntityCreationError(Exception):
+    """Raised when entity creation fails."""
+
+
+class RelationshipCreationError(Exception):
+    """Raised when relationship creation fails."""
+
+
+def create_entity(graph: Graph, label: str, entity: EntityMixin) -> str:
     """Create a new entity in the graph database."""
     properties = entity.model_dump(exclude_none=True)
     entity_id = properties.get("id")
     if not entity_id:
-        from uuid import uuid4
-
         entity_id = str(uuid4())
         properties["id"] = entity_id
 
@@ -25,7 +33,7 @@ def create_entity(graph: Graph, label: str, entity: BaseEntity) -> str:
     if result.result_set:
         return entity_id
     msg = "Failed to create entity"
-    raise Exception(msg)
+    raise EntityCreationError(msg)
 
 
 def get_entity(graph: Graph, label: str, entity_id: str) -> dict[str, Any] | None:
@@ -52,7 +60,10 @@ def get_entities_by_label(graph: Graph, label: str) -> list[dict[str, Any]]:
 
 
 def update_entity(
-    graph: Graph, label: str, entity_id: str, updates: dict[str, Any],
+    graph: Graph,
+    label: str,
+    entity_id: str,
+    updates: dict[str, Any],
 ) -> dict[str, Any] | None:
     """Update an entity in the graph database."""
     updates["updated_at"] = datetime.now(UTC).isoformat()
@@ -69,7 +80,7 @@ def update_entity(
     return None
 
 
-def delete_entity(graph: Graph, label: str, entity_id: str) -> bool:
+def delete_entity(graph: Graph, _label: str, entity_id: str) -> bool:
     """Delete an entity from the graph database."""
     query = """
     MATCH (n)
@@ -124,7 +135,7 @@ def create_relationship(
         rel_id = result.result_set[0][0]
         return str(rel_id)
     msg = "Failed to create relationship"
-    raise Exception(msg)
+    raise RelationshipCreationError(msg)
 
 
 def get_relationships(graph: Graph, entity_id: str) -> list[dict[str, Any]]:
@@ -151,17 +162,17 @@ def get_relationships(graph: Graph, entity_id: str) -> list[dict[str, Any]]:
     return relationships
 
 
-def _serialize_value(value: Any) -> Any:
+def _serialize_value(
+    value: str | float | datetime | list[Any] | dict[str, Any] | None,
+) -> str | float | None:
     if isinstance(value, datetime):
         return value.isoformat()
     if isinstance(value, (list, dict)):
-        import json
-
         return json.dumps(value)
     return value
 
 
-def _node_to_dict(node) -> dict[str, Any]:
+def _node_to_dict(node: Any) -> dict[str, Any]:  # noqa: ANN401
     props = node.properties
     return _node_to_dict_from_props(props)
 
@@ -171,8 +182,6 @@ def _node_to_dict_from_props(props: dict[str, Any]) -> dict[str, Any]:
     for key, value in props.items():
         if isinstance(value, str):
             try:
-                import json
-
                 result[key] = json.loads(value)
             except (json.JSONDecodeError, TypeError):
                 result[key] = value

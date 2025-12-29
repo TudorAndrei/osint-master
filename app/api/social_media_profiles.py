@@ -1,6 +1,7 @@
-"""Social Media Profiles API endpoints."""
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException
+from falkordb import Graph
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.db import (
     create_entity,
@@ -10,21 +11,16 @@ from app.db import (
     get_entity,
     update_entity,
 )
-from app.models import (
-    SocialMediaProfile,
-    SocialMediaProfileCreate,
-    SocialMediaProfileUpdate,
-)
+from app.models import SocialMediaProfile
 
 router = APIRouter()
 
 
 @router.post("", status_code=201)
 async def create_social_media_profile(
-    profile: SocialMediaProfileCreate,
+    profile: SocialMediaProfile,
+    db: Annotated[Graph, Depends(get_db)],
 ) -> SocialMediaProfile:
-    """Create a new social media profile."""
-    db = get_db()
     profile_model = SocialMediaProfile(**profile.model_dump())
     entity_id = create_entity(db, "SocialMediaProfile", profile_model)
     created_entity = get_entity(db, "SocialMediaProfile", entity_id)
@@ -34,17 +30,18 @@ async def create_social_media_profile(
 
 
 @router.get("")
-async def list_social_media_profiles() -> list[SocialMediaProfile]:
-    """List all social media profiles."""
-    db = get_db()
+async def list_social_media_profiles(
+    db: Annotated[Graph, Depends(get_db)],
+) -> list[SocialMediaProfile]:
     entities = get_entities_by_label(db, "SocialMediaProfile")
     return [SocialMediaProfile(**e) for e in entities]
 
 
 @router.get("/{profile_id}")
-async def get_social_media_profile(profile_id: str) -> SocialMediaProfile:
-    """Get a social media profile by ID."""
-    db = get_db()
+async def get_social_media_profile(
+    profile_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> SocialMediaProfile:
     entity = get_entity(db, "SocialMediaProfile", profile_id)
     if not entity:
         raise HTTPException(status_code=404, detail="SocialMediaProfile not found")
@@ -53,10 +50,10 @@ async def get_social_media_profile(profile_id: str) -> SocialMediaProfile:
 
 @router.put("/{profile_id}")
 async def update_social_media_profile(
-    profile_id: str, profile_update: SocialMediaProfileUpdate,
+    profile_id: str,
+    profile_update: SocialMediaProfile,
+    db: Annotated[Graph, Depends(get_db)],
 ) -> SocialMediaProfile:
-    """Update a social media profile."""
-    db = get_db()
     updates = profile_update.model_dump(exclude_none=True)
     entity = update_entity(db, "SocialMediaProfile", profile_id, updates)
     if not entity:
@@ -65,9 +62,10 @@ async def update_social_media_profile(
 
 
 @router.delete("/{profile_id}", status_code=204)
-async def delete_social_media_profile(profile_id: str) -> None:
-    """Delete a social media profile."""
-    db = get_db()
+async def delete_social_media_profile(
+    profile_id: str,
+    db: Annotated[Graph, Depends(get_db)],
+) -> None:
     deleted = delete_entity(db, "SocialMediaProfile", profile_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="SocialMediaProfile not found")
