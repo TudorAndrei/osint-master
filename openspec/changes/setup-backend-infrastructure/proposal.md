@@ -10,6 +10,8 @@ The project needs a structured backend API to store and manage OSINT findings. F
 - Database connection and query layer
 - Basic CRUD operations for entities
 - API endpoints for entity management
+- Comprehensive test suite with pytest and testcontainers
+- Post-hook script for code quality checks (ruff, ty)
 
 ## Impact
 - Affected specs: New capabilities (`backend-api`, `data-models`, `falkordb-storage`)
