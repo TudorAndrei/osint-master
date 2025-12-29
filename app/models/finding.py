@@ -1,16 +1,22 @@
-from typing import List, Optional
 from pydantic import BaseModel, Field
+
 from .base import BaseEntity
 
 
 class Finding(BaseEntity):
     title: str = Field(..., min_length=1, description="Finding title")
     description: str = Field(..., min_length=1, description="Finding description")
-    confidence_level: Optional[str] = Field(None, description="Confidence level (low/medium/high)")
-    related_entity_ids: List[str] = Field(default_factory=list, description="Related entity IDs")
-    tags: List[str] = Field(default_factory=list, description="Tags for categorization")
+    confidence_level: str | None = Field(
+        None, description="Confidence level (low/medium/high)",
+    )
+    related_entity_ids: list[str] = Field(
+        default_factory=list, description="Related entity IDs",
+    )
+    tags: list[str] = Field(default_factory=list, description="Tags for categorization")
 
     class Config:
+        """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -21,25 +27,28 @@ class Finding(BaseEntity):
                 "tags": ["suspicious", "network"],
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         }
 
 
 class FindingCreate(BaseModel):
+    """Create model for Finding entity."""
+
     title: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
-    confidence_level: Optional[str] = None
-    related_entity_ids: List[str] = Field(default_factory=list)
-    tags: List[str] = Field(default_factory=list)
+    confidence_level: str | None = None
+    related_entity_ids: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
     metadata: dict = Field(default_factory=dict)
 
 
 class FindingUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1)
-    description: Optional[str] = Field(None, min_length=1)
-    confidence_level: Optional[str] = None
-    related_entity_ids: Optional[List[str]] = None
-    tags: Optional[List[str]] = None
-    metadata: Optional[dict] = None
+    """Update model for Finding entity."""
 
+    title: str | None = Field(None, min_length=1)
+    description: str | None = Field(None, min_length=1)
+    confidence_level: str | None = None
+    related_entity_ids: list[str] | None = None
+    tags: list[str] | None = None
+    metadata: dict | None = None

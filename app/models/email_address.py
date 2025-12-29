@@ -1,22 +1,28 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator, EmailStr
+from pydantic import BaseModel, Field, field_validator
+
 from .base import BaseEntity
 
 
 class EmailAddress(BaseEntity):
     email: str = Field(..., description="Email address")
-    associated_domains: List[str] = Field(default_factory=list, description="Associated domain names")
-    description: Optional[str] = Field(None, description="Additional description")
+    associated_domains: list[str] = Field(
+        default_factory=list, description="Associated domain names",
+    )
+    description: str | None = Field(None, description="Additional description")
 
     @field_validator("email")
     @classmethod
     def validate_email(cls, v: str) -> str:
+        """Validate and normalize email address."""
         v = v.lower().strip()
         if "@" not in v:
-            raise ValueError("Invalid email format")
+            msg = "Invalid email format"
+            raise ValueError(msg)
         return v
 
     class Config:
+        """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -25,21 +31,24 @@ class EmailAddress(BaseEntity):
                 "description": "Suspicious email",
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         }
 
 
 class EmailAddressCreate(BaseModel):
+    """Create model for EmailAddress entity."""
+
     email: str
-    associated_domains: List[str] = Field(default_factory=list)
-    description: Optional[str] = None
+    associated_domains: list[str] = Field(default_factory=list)
+    description: str | None = None
     metadata: dict = Field(default_factory=dict)
 
 
 class EmailAddressUpdate(BaseModel):
-    email: Optional[str] = None
-    associated_domains: Optional[List[str]] = None
-    description: Optional[str] = None
-    metadata: Optional[dict] = None
+    """Update model for EmailAddress entity."""
 
+    email: str | None = None
+    associated_domains: list[str] | None = None
+    description: str | None = None
+    metadata: dict | None = None

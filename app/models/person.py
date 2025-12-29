@@ -1,17 +1,22 @@
-from datetime import date, datetime
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
+from datetime import date
+
+from pydantic import BaseModel, Field
+
 from .base import BaseEntity
 
 
 class Person(BaseEntity):
     name: str = Field(..., min_length=1, description="Full name of the person")
-    aliases: List[str] = Field(default_factory=list, description="Alternative names or aliases")
-    date_of_birth: Optional[date] = Field(None, description="Date of birth")
-    nationality: Optional[str] = Field(None, description="Nationality")
-    description: Optional[str] = Field(None, description="Additional description")
+    aliases: list[str] = Field(
+        default_factory=list, description="Alternative names or aliases",
+    )
+    date_of_birth: date | None = Field(None, description="Date of birth")
+    nationality: str | None = Field(None, description="Nationality")
+    description: str | None = Field(None, description="Additional description")
 
     class Config:
+        """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -22,25 +27,28 @@ class Person(BaseEntity):
                 "description": "Person of interest",
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         }
 
 
 class PersonCreate(BaseModel):
+    """Create model for Person entity."""
+
     name: str = Field(..., min_length=1)
-    aliases: List[str] = Field(default_factory=list)
-    date_of_birth: Optional[date] = None
-    nationality: Optional[str] = None
-    description: Optional[str] = None
+    aliases: list[str] = Field(default_factory=list)
+    date_of_birth: date | None = None
+    nationality: str | None = None
+    description: str | None = None
     metadata: dict = Field(default_factory=dict)
 
 
 class PersonUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1)
-    aliases: Optional[List[str]] = None
-    date_of_birth: Optional[date] = None
-    nationality: Optional[str] = None
-    description: Optional[str] = None
-    metadata: Optional[dict] = None
+    """Update model for Person entity."""
 
+    name: str | None = Field(None, min_length=1)
+    aliases: list[str] | None = None
+    date_of_birth: date | None = None
+    nationality: str | None = None
+    description: str | None = None
+    metadata: dict | None = None

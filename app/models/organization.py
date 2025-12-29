@@ -1,17 +1,19 @@
-from typing import List, Optional
 from pydantic import BaseModel, Field
+
 from .base import BaseEntity
 
 
 class Organization(BaseEntity):
     name: str = Field(..., min_length=1, description="Organization name")
-    aliases: List[str] = Field(default_factory=list, description="Alternative names")
-    org_type: Optional[str] = Field(None, description="Type of organization")
-    registration_number: Optional[str] = Field(None, description="Registration or tax ID")
-    country: Optional[str] = Field(None, description="Country of registration")
-    description: Optional[str] = Field(None, description="Additional description")
+    aliases: list[str] = Field(default_factory=list, description="Alternative names")
+    org_type: str | None = Field(None, description="Type of organization")
+    registration_number: str | None = Field(None, description="Registration or tax ID")
+    country: str | None = Field(None, description="Country of registration")
+    description: str | None = Field(None, description="Additional description")
 
     class Config:
+        """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -23,27 +25,30 @@ class Organization(BaseEntity):
                 "description": "Technology company",
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         }
 
 
 class OrganizationCreate(BaseModel):
+    """Create model for Organization entity."""
+
     name: str = Field(..., min_length=1)
-    aliases: List[str] = Field(default_factory=list)
-    org_type: Optional[str] = None
-    registration_number: Optional[str] = None
-    country: Optional[str] = None
-    description: Optional[str] = None
+    aliases: list[str] = Field(default_factory=list)
+    org_type: str | None = None
+    registration_number: str | None = None
+    country: str | None = None
+    description: str | None = None
     metadata: dict = Field(default_factory=dict)
 
 
 class OrganizationUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1)
-    aliases: Optional[List[str]] = None
-    org_type: Optional[str] = None
-    registration_number: Optional[str] = None
-    country: Optional[str] = None
-    description: Optional[str] = None
-    metadata: Optional[dict] = None
+    """Update model for Organization entity."""
 
+    name: str | None = Field(None, min_length=1)
+    aliases: list[str] | None = None
+    org_type: str | None = None
+    registration_number: str | None = None
+    country: str | None = None
+    description: str | None = None
+    metadata: dict | None = None

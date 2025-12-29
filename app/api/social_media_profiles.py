@@ -1,29 +1,49 @@
-from typing import List
+"""Social Media Profiles API endpoints."""
+
 from fastapi import APIRouter, HTTPException
-from app.models import SocialMediaProfile, SocialMediaProfileCreate, SocialMediaProfileUpdate
-from app.db import get_db, create_entity, get_entity, get_entities_by_label, update_entity, delete_entity
+
+from app.db import (
+    create_entity,
+    delete_entity,
+    get_db,
+    get_entities_by_label,
+    get_entity,
+    update_entity,
+)
+from app.models import (
+    SocialMediaProfile,
+    SocialMediaProfileCreate,
+    SocialMediaProfileUpdate,
+)
 
 router = APIRouter()
 
 
-@router.post("", response_model=SocialMediaProfile, status_code=201)
-async def create_social_media_profile(profile: SocialMediaProfileCreate):
+@router.post("", status_code=201)
+async def create_social_media_profile(
+    profile: SocialMediaProfileCreate,
+) -> SocialMediaProfile:
+    """Create a new social media profile."""
     db = get_db()
     profile_model = SocialMediaProfile(**profile.model_dump())
     entity_id = create_entity(db, "SocialMediaProfile", profile_model)
     created_entity = get_entity(db, "SocialMediaProfile", entity_id)
+    if not created_entity:
+        raise HTTPException(status_code=500, detail="Failed to retrieve created entity")
     return SocialMediaProfile(**created_entity)
 
 
-@router.get("", response_model=List[SocialMediaProfile])
-async def list_social_media_profiles():
+@router.get("")
+async def list_social_media_profiles() -> list[SocialMediaProfile]:
+    """List all social media profiles."""
     db = get_db()
     entities = get_entities_by_label(db, "SocialMediaProfile")
     return [SocialMediaProfile(**e) for e in entities]
 
 
-@router.get("/{profile_id}", response_model=SocialMediaProfile)
-async def get_social_media_profile(profile_id: str):
+@router.get("/{profile_id}")
+async def get_social_media_profile(profile_id: str) -> SocialMediaProfile:
+    """Get a social media profile by ID."""
     db = get_db()
     entity = get_entity(db, "SocialMediaProfile", profile_id)
     if not entity:
@@ -31,8 +51,11 @@ async def get_social_media_profile(profile_id: str):
     return SocialMediaProfile(**entity)
 
 
-@router.put("/{profile_id}", response_model=SocialMediaProfile)
-async def update_social_media_profile(profile_id: str, profile_update: SocialMediaProfileUpdate):
+@router.put("/{profile_id}")
+async def update_social_media_profile(
+    profile_id: str, profile_update: SocialMediaProfileUpdate,
+) -> SocialMediaProfile:
+    """Update a social media profile."""
     db = get_db()
     updates = profile_update.model_dump(exclude_none=True)
     entity = update_entity(db, "SocialMediaProfile", profile_id, updates)
@@ -42,9 +65,9 @@ async def update_social_media_profile(profile_id: str, profile_update: SocialMed
 
 
 @router.delete("/{profile_id}", status_code=204)
-async def delete_social_media_profile(profile_id: str):
+async def delete_social_media_profile(profile_id: str) -> None:
+    """Delete a social media profile."""
     db = get_db()
     deleted = delete_entity(db, "SocialMediaProfile", profile_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="SocialMediaProfile not found")
-

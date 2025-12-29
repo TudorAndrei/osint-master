@@ -1,17 +1,19 @@
-from typing import Optional
 from pydantic import BaseModel, Field
+
 from .base import BaseEntity
 
 
 class Document(BaseEntity):
     title: str = Field(..., min_length=1, description="Document title")
-    doc_type: Optional[str] = Field(None, description="Document type")
-    file_path: Optional[str] = Field(None, description="Local file path")
-    url: Optional[str] = Field(None, description="Document URL")
-    content_hash: Optional[str] = Field(None, description="Content hash (SHA256)")
-    description: Optional[str] = Field(None, description="Additional description")
+    doc_type: str | None = Field(None, description="Document type")
+    file_path: str | None = Field(None, description="Local file path")
+    url: str | None = Field(None, description="Document URL")
+    content_hash: str | None = Field(None, description="Content hash (SHA256)")
+    description: str | None = Field(None, description="Additional description")
 
     class Config:
+        """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -23,27 +25,30 @@ class Document(BaseEntity):
                 "description": "Intelligence report",
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         }
 
 
 class DocumentCreate(BaseModel):
+    """Create model for Document entity."""
+
     title: str = Field(..., min_length=1)
-    doc_type: Optional[str] = None
-    file_path: Optional[str] = None
-    url: Optional[str] = None
-    content_hash: Optional[str] = None
-    description: Optional[str] = None
+    doc_type: str | None = None
+    file_path: str | None = None
+    url: str | None = None
+    content_hash: str | None = None
+    description: str | None = None
     metadata: dict = Field(default_factory=dict)
 
 
 class DocumentUpdate(BaseModel):
-    title: Optional[str] = Field(None, min_length=1)
-    doc_type: Optional[str] = None
-    file_path: Optional[str] = None
-    url: Optional[str] = None
-    content_hash: Optional[str] = None
-    description: Optional[str] = None
-    metadata: Optional[dict] = None
+    """Update model for Document entity."""
 
+    title: str | None = Field(None, min_length=1)
+    doc_type: str | None = None
+    file_path: str | None = None
+    url: str | None = None
+    content_hash: str | None = None
+    description: str | None = None
+    metadata: dict | None = None

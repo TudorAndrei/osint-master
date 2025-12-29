@@ -1,42 +1,49 @@
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from datetime import UTC, datetime
+from typing import Any
+
 from falkordb import Graph
+
 from app.models.base import BaseEntity
 
 
 def create_entity(graph: Graph, label: str, entity: BaseEntity) -> str:
+    """Create a new entity in the graph database."""
     properties = entity.model_dump(exclude_none=True)
     entity_id = properties.get("id")
     if not entity_id:
         from uuid import uuid4
+
         entity_id = str(uuid4())
         properties["id"] = entity_id
-    
-    properties_str = ", ".join([f"{k}: ${k}" for k in properties.keys()])
+
+    properties_str = ", ".join([f"{k}: ${k}" for k in properties])
     params = {k: _serialize_value(v) for k, v in properties.items()}
-    
+
     query = f"CREATE (n:{label} {{{properties_str}}}) RETURN n.id as id"
     result = graph.query(query, params)
-    
+
     if result.result_set:
         return entity_id
-    raise Exception("Failed to create entity")
+    msg = "Failed to create entity"
+    raise Exception(msg)
 
 
-def get_entity(graph: Graph, label: str, entity_id: str) -> Optional[Dict[str, Any]]:
+def get_entity(graph: Graph, label: str, entity_id: str) -> dict[str, Any] | None:
+    """Get an entity by ID from the graph database."""
     query = f"MATCH (n:{label}) WHERE n.id = $id RETURN n"
     result = graph.query(query, {"id": entity_id})
-    
+
     if result.result_set:
         node = result.result_set[0][0]
         return _node_to_dict(node)
     return None
 
 
-def get_entities_by_label(graph: Graph, label: str) -> List[Dict[str, Any]]:
+def get_entities_by_label(graph: Graph, label: str) -> list[dict[str, Any]]:
+    """Get all entities with a given label from the graph database."""
     query = f"MATCH (n:{label}) RETURN n"
     result = graph.query(query)
-    
+
     entities = []
     for row in result.result_set:
         node = row[0]
@@ -44,15 +51,18 @@ def get_entities_by_label(graph: Graph, label: str) -> List[Dict[str, Any]]:
     return entities
 
 
-def update_entity(graph: Graph, label: str, entity_id: str, updates: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    updates["updated_at"] = datetime.utcnow().isoformat()
-    set_clauses = [f"n.{k} = ${k}" for k in updates.keys()]
+def update_entity(
+    graph: Graph, label: str, entity_id: str, updates: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Update an entity in the graph database."""
+    updates["updated_at"] = datetime.now(UTC).isoformat()
+    set_clauses = [f"n.{k} = ${k}" for k in updates]
     params = {k: _serialize_value(v) for k, v in updates.items()}
     params["id"] = entity_id
-    
+
     query = f"MATCH (n:{label}) WHERE n.id = $id SET {', '.join(set_clauses)} RETURN n"
     result = graph.query(query, params)
-    
+
     if result.result_set:
         node = result.result_set[0][0]
         return _node_to_dict(node)
@@ -60,6 +70,7 @@ def update_entity(graph: Graph, label: str, entity_id: str, updates: Dict[str, A
 
 
 def delete_entity(graph: Graph, label: str, entity_id: str) -> bool:
+    """Delete an entity from the graph database."""
     query = """
     MATCH (n)
     WHERE n.id = $id
@@ -68,7 +79,7 @@ def delete_entity(graph: Graph, label: str, entity_id: str) -> bool:
     RETURN COUNT(n) as deleted
     """
     result = graph.query(query, {"id": entity_id})
-    
+
     if result.result_set:
         deleted = result.result_set[0][0]
         return deleted > 0
@@ -80,17 +91,18 @@ def create_relationship(
     source_id: str,
     target_id: str,
     relationship_type: str,
-    properties: Optional[Dict[str, Any]] = None
+    properties: dict[str, Any] | None = None,
 ) -> str:
+    """Create a relationship between two entities in the graph database."""
     props = properties or {}
-    props["created_at"] = datetime.utcnow().isoformat()
-    props["updated_at"] = datetime.utcnow().isoformat()
-    
-    properties_str = ", ".join([f"{k}: ${k}" for k in props.keys()])
+    props["created_at"] = datetime.now(UTC).isoformat()
+    props["updated_at"] = datetime.now(UTC).isoformat()
+
+    properties_str = ", ".join([f"{k}: ${k}" for k in props])
     params = {k: _serialize_value(v) for k, v in props.items()}
     params["source_id"] = source_id
     params["target_id"] = target_id
-    
+
     if properties_str:
         query = f"""
         MATCH (a), (b)
@@ -105,33 +117,37 @@ def create_relationship(
         CREATE (a)-[r:{relationship_type}]->(b)
         RETURN ID(r) as id
         """
-    
+
     result = graph.query(query, params)
-    
+
     if result.result_set:
         rel_id = result.result_set[0][0]
         return str(rel_id)
-    raise Exception("Failed to create relationship")
+    msg = "Failed to create relationship"
+    raise Exception(msg)
 
 
-def get_relationships(graph: Graph, entity_id: str) -> List[Dict[str, Any]]:
+def get_relationships(graph: Graph, entity_id: str) -> list[dict[str, Any]]:
+    """Get all relationships for an entity from the graph database."""
     query = """
     MATCH (a)-[r]->(b)
     WHERE a.id = $id OR b.id = $id
     RETURN type(r) as type, a.id as source_id, b.id as target_id, properties(r) as props
     """
     result = graph.query(query, {"id": entity_id})
-    
+
     relationships = []
     for row in result.result_set:
         rel_type, source_id, target_id, props = row
         parsed_props = _node_to_dict_from_props(props)
-        relationships.append({
-            "relationship_type": rel_type,
-            "source_entity_id": source_id,
-            "target_entity_id": target_id,
-            **parsed_props
-        })
+        relationships.append(
+            {
+                "relationship_type": rel_type,
+                "source_entity_id": source_id,
+                "target_entity_id": target_id,
+                **parsed_props,
+            },
+        )
     return relationships
 
 
@@ -140,25 +156,26 @@ def _serialize_value(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, (list, dict)):
         import json
+
         return json.dumps(value)
     return value
 
 
-def _node_to_dict(node) -> Dict[str, Any]:
+def _node_to_dict(node) -> dict[str, Any]:
     props = node.properties
     return _node_to_dict_from_props(props)
 
 
-def _node_to_dict_from_props(props: Dict[str, Any]) -> Dict[str, Any]:
+def _node_to_dict_from_props(props: dict[str, Any]) -> dict[str, Any]:
     result = {}
     for key, value in props.items():
         if isinstance(value, str):
             try:
                 import json
+
                 result[key] = json.loads(value)
             except (json.JSONDecodeError, TypeError):
                 result[key] = value
         else:
             result[key] = value
     return result
-

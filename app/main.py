@@ -1,22 +1,25 @@
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from app.db.connection import get_db, close_db
+
 from app.api import (
-    persons,
-    organizations,
-    domains,
-    ip_addresses,
-    email_addresses,
-    social_media_profiles,
     documents,
+    domains,
+    email_addresses,
     findings,
-    sources,
+    ip_addresses,
+    organizations,
+    persons,
     relationships,
+    social_media_profiles,
+    sources,
 )
+from app.db.connection import close_db, get_db
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan manager."""
     get_db()
     yield
     close_db()
@@ -30,23 +33,35 @@ app = FastAPI(
 )
 
 app.include_router(persons.router, prefix="/api/v1/persons", tags=["persons"])
-app.include_router(organizations.router, prefix="/api/v1/organizations", tags=["organizations"])
+app.include_router(
+    organizations.router, prefix="/api/v1/organizations", tags=["organizations"],
+)
 app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
-app.include_router(ip_addresses.router, prefix="/api/v1/ip-addresses", tags=["ip-addresses"])
-app.include_router(email_addresses.router, prefix="/api/v1/email-addresses", tags=["email-addresses"])
-app.include_router(social_media_profiles.router, prefix="/api/v1/social-media-profiles", tags=["social-media-profiles"])
+app.include_router(
+    ip_addresses.router, prefix="/api/v1/ip-addresses", tags=["ip-addresses"],
+)
+app.include_router(
+    email_addresses.router, prefix="/api/v1/email-addresses", tags=["email-addresses"],
+)
+app.include_router(
+    social_media_profiles.router,
+    prefix="/api/v1/social-media-profiles",
+    tags=["social-media-profiles"],
+)
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(findings.router, prefix="/api/v1/findings", tags=["findings"])
 app.include_router(sources.router, prefix="/api/v1/sources", tags=["sources"])
-app.include_router(relationships.router, prefix="/api/v1/relationships", tags=["relationships"])
+app.include_router(
+    relationships.router, prefix="/api/v1/relationships", tags=["relationships"],
+)
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
+    """Health check endpoint."""
     try:
         db = get_db()
         db.query("RETURN 1")
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
-

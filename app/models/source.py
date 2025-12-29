@@ -1,18 +1,23 @@
 from datetime import datetime
-from typing import Optional
+
 from pydantic import BaseModel, Field
+
 from .base import BaseEntity
 
 
 class Source(BaseEntity):
     source_name: str = Field(..., min_length=1, description="Source name")
-    source_type: Optional[str] = Field(None, description="Source type")
-    url: Optional[str] = Field(None, description="Source URL")
-    collection_date: Optional[datetime] = Field(None, description="Date when data was collected")
-    reliability: Optional[str] = Field(None, description="Source reliability rating")
-    description: Optional[str] = Field(None, description="Additional description")
+    source_type: str | None = Field(None, description="Source type")
+    url: str | None = Field(None, description="Source URL")
+    collection_date: datetime | None = Field(
+        None, description="Date when data was collected",
+    )
+    reliability: str | None = Field(None, description="Source reliability rating")
+    description: str | None = Field(None, description="Additional description")
 
     class Config:
+        """Pydantic configuration."""
+
         json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
@@ -24,27 +29,30 @@ class Source(BaseEntity):
                 "description": "Public records database",
                 "created_at": "2024-01-01T00:00:00",
                 "updated_at": "2024-01-01T00:00:00",
-                "metadata": {}
-            }
+                "metadata": {},
+            },
         }
 
 
 class SourceCreate(BaseModel):
+    """Create model for Source entity."""
+
     source_name: str = Field(..., min_length=1)
-    source_type: Optional[str] = None
-    url: Optional[str] = None
-    collection_date: Optional[datetime] = None
-    reliability: Optional[str] = None
-    description: Optional[str] = None
+    source_type: str | None = None
+    url: str | None = None
+    collection_date: datetime | None = None
+    reliability: str | None = None
+    description: str | None = None
     metadata: dict = Field(default_factory=dict)
 
 
 class SourceUpdate(BaseModel):
-    source_name: Optional[str] = Field(None, min_length=1)
-    source_type: Optional[str] = None
-    url: Optional[str] = None
-    collection_date: Optional[datetime] = None
-    reliability: Optional[str] = None
-    description: Optional[str] = None
-    metadata: Optional[dict] = None
+    """Update model for Source entity."""
 
+    source_name: str | None = Field(None, min_length=1)
+    source_type: str | None = None
+    url: str | None = None
+    collection_date: datetime | None = None
+    reliability: str | None = None
+    description: str | None = None
+    metadata: dict | None = None

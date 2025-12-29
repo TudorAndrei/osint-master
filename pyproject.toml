@@ -26,6 +26,10 @@ line-length = 88
 select = ["ALL"]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D100", "D101", "D102", "D103", "PLR2004", "ANN001"]
+"**/__init__.py" = ["D104"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

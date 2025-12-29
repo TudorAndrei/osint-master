@@ -1,23 +1,22 @@
-from .connection import get_db, close_db
+from .connection import close_db, get_db
 from .queries import (
     create_entity,
-    get_entity,
-    get_entities_by_label,
-    update_entity,
-    delete_entity,
     create_relationship,
+    delete_entity,
+    get_entities_by_label,
+    get_entity,
     get_relationships,
+    update_entity,
 )
 
 __all__ = [
-    "get_db",
     "close_db",
     "create_entity",
-    "get_entity",
-    "get_entities_by_label",
-    "update_entity",
-    "delete_entity",
     "create_relationship",
+    "delete_entity",
+    "get_db",
+    "get_entities_by_label",
+    "get_entity",
     "get_relationships",
+    "update_entity",
 ]
-
