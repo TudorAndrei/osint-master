@@ -1,9 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Annotated
 
-from falkordb import Graph  # pyright: ignore[reportMissingTypeStubs]
-from fastapi import Depends, FastAPI
+from fastapi import APIRouter, FastAPI, Response
 
 from app.api import (
     documents,
@@ -17,7 +15,7 @@ from app.api import (
     social_media_profiles,
     sources,
 )
-from app.db.connection import close_connection_pool, get_db, init_connection_pool
+from app.db.connection import close_connection_pool, init_connection_pool
 
 
 @asynccontextmanager
@@ -34,45 +32,42 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.include_router(persons.router, prefix="/api/v1/persons", tags=["persons"])
-app.include_router(
+api_router = APIRouter()
+
+api_router.include_router(persons.router, prefix="/persons", tags=["persons"])
+api_router.include_router(
     organizations.router,
-    prefix="/api/v1/organizations",
+    prefix="/organizations",
     tags=["organizations"],
 )
-app.include_router(domains.router, prefix="/api/v1/domains", tags=["domains"])
-app.include_router(
+api_router.include_router(domains.router, prefix="/domains", tags=["domains"])
+api_router.include_router(
     ip_addresses.router,
-    prefix="/api/v1/ip-addresses",
+    prefix="/ip-addresses",
     tags=["ip-addresses"],
 )
-app.include_router(
+api_router.include_router(
     email_addresses.router,
-    prefix="/api/v1/email-addresses",
+    prefix="/email-addresses",
     tags=["email-addresses"],
 )
-app.include_router(
+api_router.include_router(
     social_media_profiles.router,
-    prefix="/api/v1/social-media-profiles",
+    prefix="/social-media-profiles",
     tags=["social-media-profiles"],
 )
-app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
-app.include_router(findings.router, prefix="/api/v1/findings", tags=["findings"])
-app.include_router(sources.router, prefix="/api/v1/sources", tags=["sources"])
-app.include_router(
+api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
+api_router.include_router(findings.router, prefix="/findings", tags=["findings"])
+api_router.include_router(sources.router, prefix="/sources", tags=["sources"])
+api_router.include_router(
     relationships.router,
-    prefix="/api/v1/relationships",
+    prefix="/relationships",
     tags=["relationships"],
 )
 
+app.include_router(api_router)
 
-@app.get("/health")
-async def health_check(
-    db: Annotated[Graph, Depends(get_db)],
-) -> dict[str, str]:
-    try:
-        _ = db.query("RETURN 1")
-    except (ConnectionError, RuntimeError, ValueError) as e:
-        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
-    else:
-        return {"status": "healthy", "database": "connected"}
+
+@app.get("/health", status_code=200)
+async def health_check() -> Response:
+    return Response(status_code=200)

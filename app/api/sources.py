@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from falkordb import Graph
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from app.db import (
     create_entity,
@@ -12,6 +12,7 @@ from app.db import (
     update_entity,
 )
 from app.models import Source
+from app.tasks import fetch_whois_for_url
 
 router = APIRouter()
 
@@ -20,12 +21,17 @@ router = APIRouter()
 async def create_source(
     source: Source,
     db: Annotated[Graph, Depends(get_db)],
+    background_tasks: BackgroundTasks,
 ) -> Source:
     source_model = Source(**source.model_dump())
     entity_id = create_entity(db, "Source", source_model)
     created_entity = get_entity(db, "Source", entity_id)
     if not created_entity:
         raise HTTPException(status_code=500, detail="Failed to retrieve created entity")
+
+    if source.source_type == "website" and source.url:
+        background_tasks.add_task(fetch_whois_for_url, source.url)
+
     return Source(**created_entity)
 
 
