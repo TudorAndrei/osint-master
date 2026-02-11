@@ -1,0 +1,8 @@
+{"id":"person-bezos","schema":"Person","properties":{"name":["Jeffrey P. Bezos"]}}
+{"id":"person-jassy","schema":"Person","properties":{"name":["Andrew R. Jassy"]}}
+{"id":"company-amazon","schema":"Company","properties":{"name":["Amazon.com"]}}
+{"id":"org-bezos-trust","schema":"Organization","properties":{"name":["Bezos Family Trust"]}}
+{"id":"rel-employment-bezos","schema":"Employment","properties":{"person":["Jeffrey P. Bezos"],"organization":["Amazon.com"],"role":["Chief Executive Officer"],"startDate":["1996-05"],"status":["current"],"confidence":["0.96"]}}
+{"id":"rel-directorship-jassy","schema":"Directorship","properties":{"director":["Andrew R. Jassy"],"organization":["Amazon.com"],"role":["Board Member"],"startDate":["2021-05"],"status":["current"],"confidence":["0.94"]}}
+{"id":"rel-ownership-trust","schema":"Ownership","properties":{"owner":["Bezos Family Trust"],"asset":["Amazon.com"],"percentage":["9.8%"],"date":["2023-12-31"],"ownershipType":["beneficial"],"confidence":["0.95"]}}
+{"id":"rel-representation-bezos","schema":"Representation","properties":{"agent":["Jeffrey P. Bezos"],"client":["Bezos Family Trust"],"role":["trustee"],"status":["current"],"confidence":["0.91"]}}

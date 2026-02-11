@@ -216,3 +216,46 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# ===================
+# Frontend (Bun/Node)
+# ===================
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+frontend/dist/
+frontend/build/
+
+# Bun
+bun.lockb
+
+# Vite
+*.local
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===================
+# Project specific
+# ===================
+
+# Environment files (keep .env.example)
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Sample data output
+scripts/*.ftm
+
+# FalkorDB data (Docker volume)
+falkordb_data/
