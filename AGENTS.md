@@ -2,6 +2,10 @@
 
 This file defines two implementation-focused agents for this repository.
 
+## Documentation and References Rule
+
+- When creating documentation or searching for implementation references, check the repository docs first (for example `README.md`, `docs/`, and adjacent module docs) and align outputs with those sources.
+
 ## Project Software Stack
 
 - **Runtime/Tooling**: Docker, Docker Compose, Git
@@ -76,6 +80,7 @@ This file defines two implementation-focused agents for this repository.
 - Keep route files focused on orchestration, not reusable UI primitives.
 - Prefer strongly typed query/mutation data.
 - Avoid introducing unused components or dead routes.
+- Enforce Bun-only package management and script execution; do not use `npm`, `npx`, `yarn`, or `pnpm` for frontend tasks.
 
 ### Validation Commands
 - `cd frontend && bun run lint`

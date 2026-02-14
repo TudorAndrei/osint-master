@@ -30,15 +30,38 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
+    # Clerk
+    clerk_secret_key: str = ""
+    clerk_authorized_parties: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    auth_disabled: bool = False
+
     # Yente
     yente_url: str = "http://localhost:8001"
     yente_dataset: str = "default"
     yente_timeout_seconds: int = 15
 
+    # WebCheck settings
+    webcheck_enabled: bool = False
+    webcheck_base_url: str = "http://localhost:3000"
+    webcheck_timeout_seconds: int = 30
+    webcheck_subsample_fields: list[str] = [
+        "dns",
+        "ssl",
+        "headers",
+        "redirects",
+        "techStack",
+        "hostnames",
+    ]
+
+    # Shodan settings
+    shodan_enabled: bool = False
+    shodan_mode: str = "platform"  # platform | byok
+    shodan_api_key: str = ""
+
     # RustFS / S3-compatible storage
     s3_endpoint_url: str = "http://localhost:9000"
     s3_access_key: str = "rustfsadmin"
-    s3_secret_key: str = "rustfsadmin"
+    s3_secret_key: str = ""
     s3_region: str = "us-east-1"
     s3_bucket_name: str = "documents"
     s3_secure: bool = False
@@ -47,9 +70,20 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     extract_model_id: str = "gemini-2.5-flash"
 
+    # Chat agent (empty means: use same Gemini model as extraction)
+    chat_model_id: str = ""
+
     # DBOS
     dbos_app_name: str = "osint-master-ingest"
     dbos_system_database_url: str = "postgresql://postgres:postgres@localhost:5432/osint"
+
+    # Notebook persistence
+    notebook_database_url: str | None = None
+
+    # Logfire observability
+    logfire_token: str = ""
+    logfire_environment: str = "development"
+    logfire_service_name: str = "osint-master-backend"
 
 
 settings = Settings()

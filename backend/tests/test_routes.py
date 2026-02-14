@@ -17,5 +17,7 @@ def test_core_api_routes_registered() -> None:
     assert "/api/investigations/{investigation_id}/ingest" in paths
     assert "/api/investigations/{investigation_id}/ingest/{workflow_id}/status" in paths
     assert "/api/investigations/{investigation_id}/graph" in paths
+    assert "/api/investigations/{investigation_id}/notebook" in paths
     assert "/api/schema" in paths
     assert "/api/schema/{schema_name}" in paths
+    assert "/api/auth/me" in paths

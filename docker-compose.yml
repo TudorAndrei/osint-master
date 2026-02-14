@@ -6,9 +6,9 @@ services:
       - "6379:6379" # Redis protocol
       - "3000:3000" # FalkorDB Browser UI
     volumes:
-      - falkordb_data:/data
+      - falkordb_data:/var/lib/falkordb/data
     environment:
-      - FALKORDB_ARGS=--save 900 1 --save 300 10 --save 60 10000
+      - FALKORDB_ARGS=--appendonly yes --save 900 1 --save 300 10 --save 60 10000
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -29,6 +29,9 @@ services:
       CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
       YENTE_URL: http://yente-app:8000
       YENTE_DATASET: default
+      WEBCHECK_ENABLED: "true"
+      WEBCHECK_BASE_URL: http://web-check:3000
+      WEBCHECK_TIMEOUT_SECONDS: 30
       S3_ENDPOINT_URL: http://rustfs:9000
       S3_ACCESS_KEY: ${RUSTFS_ROOT_USER:-rustfsadmin}
       S3_SECRET_KEY: ${RUSTFS_ROOT_PASSWORD:-rustfsadmin}
@@ -39,6 +42,8 @@ services:
         condition: service_healthy
       yente-app:
         condition: service_healthy
+      web-check:
+        condition: service_started
       rustfs:
         condition: service_healthy
       postgres:
@@ -62,6 +67,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
+  web-check:
+    image: lissy93/web-check:latest
+    container_name: osint-web-check
+    ports:
+      - "127.0.0.1:3002:3000"
     restart: unless-stopped
   yente-index:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.14.3
@@ -103,6 +114,7 @@ services:
       YENTE_INDEX_TYPE: "elasticsearch"
       YENTE_INDEX_URL: http://yente-index:9200
       YENTE_MANIFEST: /app/manifests/civic.yml
+      YENTE_AUTO_REINDEX: false
       OPENSANCTIONS_DELIVERY_TOKEN: "${OPENSANCTIONS_DELIVERY_TOKEN:-your-secret-token}"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
@@ -131,11 +143,7 @@ services:
       - rustfs_data:/data
       - rustfs_logs:/logs
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/); [ \"$$code\" = \"200\" ] || [ \"$$code\" = \"403\" ]",
-        ]
+      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9000/); [ \"$$code\" = \"200\" ] || [ \"$$code\" = \"403\" ]"]
       interval: 30s
       timeout: 10s
       retries: 3

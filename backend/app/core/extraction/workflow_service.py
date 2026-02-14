@@ -6,6 +6,7 @@ from threading import Lock
 from typing import Any, Protocol, cast
 from uuid import uuid4
 
+import logfire
 from dbos import DBOS
 
 from app.config import settings
@@ -80,7 +81,7 @@ def _resolve_entity_ref(graph: GraphProtocol, ref: str, name_to_id: dict[str, st
     return None
 
 
-def _create_edge(
+def _create_edge(  # noqa: PLR0913
     graph: GraphProtocol,
     edge_id: str,
     schema: str,
@@ -136,7 +137,7 @@ def extract_entities_step(parsed: dict) -> list[dict]:
 
 
 @DBOS.step()
-def persist_entities_step(
+def persist_entities_step(  # noqa: C901, PLR0912, PLR0915
     payload: dict[str, object],
 ) -> dict:
     """Step 4: Persist parsed document and extracted entities."""
@@ -166,7 +167,7 @@ def persist_entities_step(
     entity_service = _entity_service()
     storage = StorageService()
     graph = cast(
-        GraphProtocol,
+        "GraphProtocol",
         entity_service.graph_service.create_investigation_graph(investigation_id),
     )
 
@@ -329,10 +330,12 @@ class ExtractionWorkflowService:
                 "name": settings.dbos_app_name,
                 "system_database_url": settings.dbos_system_database_url,
             }
-            DBOS(config=cast(Any, config))
-            DBOS.launch()
+            with logfire.span("initialize dbos runtime"):
+                DBOS(config=cast("Any", config))
+                DBOS.launch()
             DBOS_STATE["launched"] = True
 
+    @logfire.instrument("enqueue extraction workflow", extract_args=False)
     def enqueue(
         self,
         investigation_id: str,
@@ -352,6 +355,7 @@ class ExtractionWorkflowService:
         )
         return str(getattr(handle, "workflow_id", ""))
 
+    @logfire.instrument("get workflow status", extract_args=False)
     def get_status(self, workflow_id: str) -> dict:
         """Get workflow state and result/error if available."""
         try:

@@ -11,6 +11,7 @@ from app.core.ftm_service import FTMService
 from app.core.graph_service import GraphService
 from app.core.ingest_service import IngestService
 from app.core.investigation_service import InvestigationService
+from app.core.notebook_service import NotebookService
 from app.core.storage_service import StorageService
 from app.core.yente_service import YenteService
 
@@ -63,6 +64,12 @@ def get_extraction_workflow_service() -> ExtractionWorkflowService:
     return ExtractionWorkflowService()
 
 
+@lru_cache
+def get_notebook_service() -> NotebookService:
+    """Get notebook service singleton."""
+    return NotebookService()
+
+
 GraphServiceDep = Annotated[GraphService, Depends(get_graph_service)]
 FTMServiceDep = Annotated[FTMService, Depends(get_ftm_service)]
 InvestigationServiceDep = Annotated[InvestigationService, Depends(get_investigation_service)]
@@ -74,3 +81,4 @@ ExtractionWorkflowServiceDep = Annotated[
     ExtractionWorkflowService,
     Depends(get_extraction_workflow_service),
 ]
+NotebookServiceDep = Annotated[NotebookService, Depends(get_notebook_service)]

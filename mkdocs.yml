@@ -1,0 +1,65 @@
+site_name: OSINT Master Docs
+site_description: Documentation for the OSINT Master investigation platform
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+
+plugins:
+  - search
+  - mermaid2
+  - include-markdown
+  - macros
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+  - swagger-ui-tag
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - backend
+          options:
+            docstring_style: google
+            allow_inspection: false
+            show_source: false
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Overview: index.md
+  - Getting Started: getting-started.md
+  - Architecture: architecture.md
+  - Data Sources: sources.md
+  - Backend API: backend.md
+  - API Explorer: api/openapi.md
+  - Python Reference: reference/backend-python.md
+  - Frontend: frontend.md
+  - Operations: operations.md
+  - Roadmap: roadmap.md

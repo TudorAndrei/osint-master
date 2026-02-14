@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Iterable
-
+from datetime import UTC, datetime
 
 DATE_INPUT_FORMATS = (
     "%Y-%m-%d",
@@ -14,6 +12,11 @@ DATE_INPUT_FORMATS = (
     "%d-%m-%Y",
     "%m-%d-%Y",
 )
+
+COUNTRY_CODE_LENGTH = 2
+YEAR_LENGTH = 4
+YEAR_MONTH_LENGTH = 7
+MAX_MONTH_VALUE = 12
 
 DATE_FIELDS = {
     "birthDate",
@@ -100,7 +103,7 @@ class CleaningService:
             return parsed if parsed is not None else text
 
         if key in COUNTRY_FIELDS:
-            return text.lower() if len(text) == 2 else text
+            return text.lower() if len(text) == COUNTRY_CODE_LENGTH else text
 
         if key in LOWERCASE_FIELDS:
             return text.lower()
@@ -109,17 +112,18 @@ class CleaningService:
 
     @staticmethod
     def _normalize_date(value: str) -> str | None:
-        if len(value) == 4 and value.isdigit():
+        if len(value) == YEAR_LENGTH and value.isdigit():
             return value
 
-        if len(value) == 7 and value[4] in {"-", "/"}:
-            year, month = value.split(value[4], maxsplit=1)
-            if year.isdigit() and month.isdigit() and 1 <= int(month) <= 12:
+        if len(value) == YEAR_MONTH_LENGTH and value[YEAR_LENGTH] in {"-", "/"}:
+            year, month = value.split(value[YEAR_LENGTH], maxsplit=1)
+            if year.isdigit() and month.isdigit() and 1 <= int(month) <= MAX_MONTH_VALUE:
                 return f"{year}-{int(month):02d}"
 
         for fmt in DATE_INPUT_FORMATS:
             try:
-                return datetime.strptime(value, fmt).strftime("%Y-%m-%d")
+                parsed = datetime.strptime(value, fmt).replace(tzinfo=UTC)
+                return parsed.strftime("%Y-%m-%d")
             except ValueError:
                 continue
         return None
@@ -127,8 +131,7 @@ class CleaningService:
     @staticmethod
     def _normalize_number(value: str) -> str | None:
         compact = value.replace(",", "").replace(" ", "")
-        if compact.endswith("%"):
-            compact = compact[:-1]
+        compact = compact.removesuffix("%")
 
         try:
             number = float(compact)
@@ -140,7 +143,7 @@ class CleaningService:
         return str(number)
 
     @staticmethod
-    def _dedupe(values: Iterable[str]) -> list[str]:
+    def _dedupe(values: list[str]) -> list[str]:
         seen: set[str] = set()
         deduped: list[str] = []
         for value in values:

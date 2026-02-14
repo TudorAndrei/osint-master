@@ -86,6 +86,22 @@ bun run dev
 
 The backend is available at `http://localhost:8000` and the frontend at `http://localhost:5173`.
 
+## Documentation (MkDocs Material)
+
+This repository now includes a MkDocs Material setup under `mkdocs.yml` and `docs/`.
+
+Run docs locally from repository root:
+
+```bash
+uvx --from mkdocs mkdocs serve -a 127.0.0.1:8002
+```
+
+Build static docs site:
+
+```bash
+uvx --from mkdocs mkdocs build
+```
+
 ## Notes
 
 - FollowTheMoney support is currently optional in backend dependency groups (`uv sync --extra ftm`) due to local compiler requirements (`pyicu` build dependency).

@@ -78,7 +78,7 @@ class IngestService:
     def _normalize_relation_properties(
         schema: str, properties: dict[str, list[str]]
     ) -> dict[str, list[str]]:
-        normalized: dict[str, list[str]] = {key: values for key, values in properties.items()}
+        normalized: dict[str, list[str]] = dict(properties)
         aliases = RELATION_PROPERTY_ALIASES.get(schema, {})
         for alias, canonical in aliases.items():
             alias_values = normalized.get(alias) or []
@@ -173,7 +173,7 @@ class IngestService:
             msg = f"Unsupported file extension '{extension}'. Supported: {supported}"
             raise ValueError(msg)
 
-    def _edge_candidate(
+    def _edge_candidate(  # noqa: PLR0913
         self,
         investigation_id: str,
         idx: int,

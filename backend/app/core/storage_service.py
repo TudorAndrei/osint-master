@@ -6,10 +6,16 @@ import hashlib
 import re
 
 import boto3
+import logfire
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
 from app.config import settings
+
+S3_BUCKET_MIN_LENGTH = 3
+S3_BUCKET_MAX_LENGTH = 63
+S3_BUCKET_HASH_LEN = 10
+S3_BUCKET_PREFIX_MAX = 52
 
 
 class StorageService:
@@ -38,24 +44,26 @@ class StorageService:
         raw = f"{self.bucket_prefix}-{investigation_id}".lower()
         cleaned = re.sub(r"[^a-z0-9.-]", "-", raw)
         cleaned = re.sub(r"-+", "-", cleaned).strip("-.")
-        if len(cleaned) < 3:
+        if len(cleaned) < S3_BUCKET_MIN_LENGTH:
             cleaned = f"{self.bucket_prefix}-inv"
-        if len(cleaned) > 63:
-            digest = hashlib.sha1(cleaned.encode("utf-8")).hexdigest()[:10]
-            cleaned = f"{cleaned[:52].rstrip('-')}-{digest}"
+        if len(cleaned) > S3_BUCKET_MAX_LENGTH:
+            digest = hashlib.blake2s(cleaned.encode("utf-8"), digest_size=8).hexdigest()
+            cleaned = f"{cleaned[:S3_BUCKET_PREFIX_MAX].rstrip('-')}-{digest[:S3_BUCKET_HASH_LEN]}"
         return cleaned
 
+    @logfire.instrument("ensure storage bucket", extract_args=False)
     def ensure_bucket(self, investigation_id: str) -> str:
         """Create the bucket if it does not exist yet."""
         bucket_name = self._bucket_name_for(investigation_id)
         try:
             self.client.head_bucket(Bucket=bucket_name)
-            return bucket_name
         except ClientError as exc:
             error_code = str(exc.response.get("Error", {}).get("Code", ""))
             # Some S3-compatible providers return 403 for missing bucket.
             if error_code not in {"403", "404", "NoSuchBucket", "NotFound", "AccessDenied"}:
                 raise
+        else:
+            return bucket_name
 
         try:
             if settings.s3_region and settings.s3_region != "us-east-1":
@@ -72,6 +80,7 @@ class StorageService:
             raise
         return bucket_name
 
+    @logfire.instrument("upload object bytes", extract_args=False)
     def upload_bytes(
         self,
         investigation_id: str,
@@ -98,6 +107,7 @@ class StorageService:
         )
         return key
 
+    @logfire.instrument("download object bytes", extract_args=False)
     def download_bytes(self, investigation_id: str, key: str) -> bytes:
         """Download file bytes by object key."""
         bucket_name = self._bucket_name_for(investigation_id)

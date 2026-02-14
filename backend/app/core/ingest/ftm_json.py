@@ -1,13 +1,11 @@
 """FTM JSON/NDJSON ingestor."""
 
-from __future__ import annotations
-
 import json
+from collections.abc import Callable, Iterator
 from importlib import import_module
-from collections.abc import Iterator
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any
+from typing import cast
 
 from app.core.ingest.base import BaseIngestor
 
@@ -65,22 +63,25 @@ class FTMJsonIngestor(BaseIngestor):
             yield entity
 
     @staticmethod
-    def _smart_read_proxies() -> Any | None:
+    def _smart_read_proxies() -> Callable[[str], Iterator[object]] | None:
         try:
             module = import_module("ftmq.io")
         except ImportError:  # pragma: no cover - optional dependency
             return None
-        return getattr(module, "smart_read_proxies", None)
+        candidate = getattr(module, "smart_read_proxies", None)
+        if callable(candidate):
+            return cast("Callable[[str], Iterator[object]]", candidate)
+        return None
 
     @staticmethod
-    def _proxy_to_dict(proxy: Any) -> dict | None:
+    def _proxy_to_dict(proxy: object) -> dict[str, object] | None:
         if isinstance(proxy, dict):
-            return proxy
+            return cast("dict[str, object]", proxy)
         to_dict = getattr(proxy, "to_dict", None)
         if callable(to_dict):
             data = to_dict()
             if isinstance(data, dict):
-                return data
+                return cast("dict[str, object]", data)
         if hasattr(proxy, "id") and hasattr(proxy, "schema") and hasattr(proxy, "properties"):
             return {
                 "id": str(getattr(proxy, "id", "")),

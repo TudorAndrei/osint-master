@@ -1,27 +1,28 @@
 """LLM extraction service powered by LangExtract."""
 
-from __future__ import annotations
+from typing import cast
 
 import langextract as lx
+import logfire
 
 from app.config import settings
 from app.core.cleaning_service import CleaningService
 
-SCHEMA_BY_CLASS = {
-    "Person": "Person",
-    "Company": "Company",
-    "Organization": "Organization",
-    "Security": "Security",
-    "Email": "Email",
-    "Ownership": "Ownership",
-    "Directorship": "Directorship",
-    "Employment": "Employment",
-    "Associate": "Associate",
-    "Family": "Family",
-    "Membership": "Membership",
-    "Representation": "Representation",
-    "Payment": "Payment",
-    "UnknownLink": "UnknownLink",
+ALLOWED_EXTRACTION_CLASSES = {
+    "Person",
+    "Company",
+    "Organization",
+    "Security",
+    "Email",
+    "Ownership",
+    "Directorship",
+    "Employment",
+    "Associate",
+    "Family",
+    "Membership",
+    "Representation",
+    "Payment",
+    "UnknownLink",
 }
 
 
@@ -34,7 +35,8 @@ class ExtractionService:
             raise RuntimeError(msg)
         self.cleaning_service = CleaningService()
 
-    def extract_entities(self, text: str, document_type: str) -> list[dict]:
+    @logfire.instrument("extract entities from document", extract_args=False)
+    def extract_entities(self, text: str, document_type: str) -> list[dict]:  # noqa: C901
         prompt = self._prompt_for(document_type)
         examples = self._examples()
 
@@ -54,9 +56,9 @@ class ExtractionService:
             char_interval = getattr(extraction, "char_interval", None)
             confidence = getattr(extraction, "confidence", None)
 
-            schema = SCHEMA_BY_CLASS.get(extraction_class)
-            if schema is None:
+            if extraction_class not in ALLOWED_EXTRACTION_CLASSES:
                 continue
+            schema = extraction_class
 
             properties: dict[str, list[str]] = {}
             for key, value in attributes.items():
@@ -82,10 +84,13 @@ class ExtractionService:
                 properties["name"] = [extraction_text]
 
             if properties:
+                cleaned_properties = self.cleaning_service.clean_properties(
+                    cast("dict[str, object]", properties)
+                )
                 entities.append(
                     {
                         "schema": schema,
-                        "properties": self.cleaning_service.clean_properties(properties),
+                        "properties": cleaned_properties,
                     }
                 )
 
@@ -102,11 +107,14 @@ class ExtractionService:
             "For relation entities, extract FTM-compliant attributes when explicit: "
             "startDate/endDate/date, role/status, summary/description, sourceUrl, percentage, "
             "amount/currency, and relationship details. "
-            "Use relationship endpoints: Ownership(owner, asset), Directorship(director, organization), "
-            "Employment(employee, employer), Associate(person, associate), Family(person, relative), "
-            "Membership(member, organization), Representation(agent, client), Payment(payer, beneficiary), "
+            "Use relationship endpoints: Ownership(owner, asset), "
+            "Directorship(director, organization), Employment(employee, employer), "
+            "Associate(person, associate), Family(person, relative), "
+            "Membership(member, organization), Representation(agent, client), "
+            "Payment(payer, beneficiary), "
             "UnknownLink(subject, object). "
-            "When multiple mentions describe one relationship, attach relationGroup with the same value."
+            "When multiple mentions describe one relationship, "
+            "attach relationGroup with the same value."
         )
         if document_type == "sec_filing":
             return (

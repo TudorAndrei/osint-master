@@ -41,7 +41,10 @@ class EntityService:
         self.ftm_service = ftm_service
 
     def _graph(self, investigation_id: str) -> GraphProtocol:
-        return cast(GraphProtocol, self.graph_service.create_investigation_graph(investigation_id))
+        return cast(
+            "GraphProtocol",
+            self.graph_service.create_investigation_graph(investigation_id),
+        )
 
     @staticmethod
     def _normalize_properties(properties: dict[str, Any]) -> dict[str, list[str]]:
@@ -88,7 +91,7 @@ class EntityService:
             msg = f"Entity '{entity_id}' not found"
             raise ValueError(msg)
 
-        node: NodeProtocol = cast(NodeProtocol, existing[0][0])
+        node: NodeProtocol = cast("NodeProtocol", existing[0][0])
         removable_keys = [key for key in node.properties if key not in {"id", "schema"}]
         remove_clause = ""
         if removable_keys:
@@ -274,8 +277,8 @@ class EntityService:
             return None
 
         node, raw_neighbors, raw_edges = result[0]
-        neighbor_nodes = cast(list[NodeProtocol | None], raw_neighbors)
-        edge_items = cast(list[dict[str, object]], raw_edges)
+        neighbor_nodes = cast("list[NodeProtocol | None]", raw_neighbors)
+        edge_items = cast("list[dict[str, object]]", raw_edges)
         neighbors = [
             self._to_entity(neighbor)  # type: ignore[arg-type]
             for neighbor in neighbor_nodes
@@ -315,7 +318,7 @@ class EntityService:
         candidates.sort(key=lambda candidate: candidate.similarity, reverse=True)
         return candidates[:limit]
 
-    def merge_entities(
+    def merge_entities(  # noqa: C901
         self,
         investigation_id: str,
         source_ids: list[str],
@@ -324,7 +327,7 @@ class EntityService:
     ) -> MergeEntitiesResponse:
         unique_ids = [entity_id.strip() for entity_id in source_ids if entity_id.strip()]
         unique_ids = list(dict.fromkeys(unique_ids))
-        if len(unique_ids) < 2:
+        if len(unique_ids) < self.MIN_MERGE_SOURCE_IDS:
             msg = "At least two source_ids are required"
             raise ValueError(msg)
         if target_id not in unique_ids:
@@ -366,7 +369,7 @@ class EntityService:
 
             for row in outgoing:
                 rel_type = str(row[0])
-                rel_props = cast(dict[str, Any], row[1] or {})
+                rel_props = cast("dict[str, Any]", row[1] or {})
                 other_id = str(row[2])
                 if other_id == target_id:
                     continue
@@ -374,7 +377,7 @@ class EntityService:
 
             for row in incoming:
                 rel_type = str(row[0])
-                rel_props = cast(dict[str, Any], row[1] or {})
+                rel_props = cast("dict[str, Any]", row[1] or {})
                 other_id = str(row[2])
                 if other_id == target_id:
                     continue
@@ -393,3 +396,5 @@ class EntityService:
 
         merged_ids = [entity_id for entity_id in unique_ids if entity_id != target_id]
         return MergeEntitiesResponse(target=merged, merged_source_ids=merged_ids)
+
+    MIN_MERGE_SOURCE_IDS = 2

@@ -7,6 +7,7 @@ from typing import Any
 from urllib import parse
 
 import httpx
+import logfire
 
 from app.config import settings
 from app.models.enrich import YenteSearchResponse, YenteSearchResult
@@ -19,6 +20,7 @@ class YenteServiceError(Exception):
 class YenteService:
     """Search OpenSanctions entities through Yente."""
 
+    @logfire.instrument("request yente json", extract_args=False)
     def _request_json(self, path: str, params: dict[str, str] | None = None) -> dict[str, Any]:
         url = f"{settings.yente_url.rstrip('/')}/{path.lstrip('/')}"
 

@@ -178,7 +178,7 @@ class GraphService:
         ).result_set
         edge_rows = graph.query(
             "MATCH (a:Entity)-[r]->(b:Entity) "
-            "RETURN toString(ID(r)), a.id, b.id, type(r), properties(r) "
+            "RETURN toString(ID(r)), a.id, b.id, coalesce(r.schema, type(r)), properties(r) "
             "ORDER BY a.id, b.id SKIP $skip LIMIT $limit",
             params={"skip": skip, "limit": limit},
         ).result_set

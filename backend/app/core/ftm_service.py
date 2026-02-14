@@ -113,7 +113,11 @@ class FTMService:
         """Return whether a schema exists."""
         return self.get_schema(name) is not None
 
-    def validate_entity_input(self, schema: str, properties: dict[str, list[str]]) -> None:
+    def validate_entity_input(  # noqa: C901
+        self,
+        schema: str,
+        properties: dict[str, list[str]],
+    ) -> None:
         """Validate schema and properties using FTM when available."""
         for key, values in properties.items():
             if not isinstance(values, list) or any(not isinstance(value, str) for value in values):
