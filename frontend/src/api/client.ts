@@ -16,12 +16,22 @@ import type {
   Investigation,
   InvestigationCreate,
   InvestigationList,
+  NotebookDocument,
+  NotebookUpdate,
   Schema,
   YenteLinkResponse,
   YenteSearchResponse,
 } from "./types";
 
 const API_BASE = "/api";
+
+type AuthTokenGetter = () => Promise<string | null>;
+
+let authTokenGetter: AuthTokenGetter = async () => null;
+
+export function setAuthTokenGetter(getter: AuthTokenGetter) {
+  authTokenGetter = getter;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -44,16 +54,31 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json();
 }
 
+async function buildHeaders(baseHeaders?: HeadersInit): Promise<Headers> {
+  const headers = new Headers(baseHeaders);
+  const token = await authTokenGetter();
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  return headers;
+}
+
+export async function buildAuthHeaders(baseHeaders?: HeadersInit): Promise<Headers> {
+  return buildHeaders(baseHeaders);
+}
+
 export const apiClient = {
   async get<T>(path: string): Promise<T> {
-    const response = await fetch(`${API_BASE}${path}`);
+    const response = await fetch(`${API_BASE}${path}`, {
+      headers: await buildHeaders(),
+    });
     return handleResponse<T>(response);
   },
 
   async post<T>(path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await buildHeaders({ "Content-Type": "application/json" }),
       body: body ? JSON.stringify(body) : undefined,
     });
     return handleResponse<T>(response);
@@ -62,7 +87,7 @@ export const apiClient = {
   async put<T>(path: string, body: unknown): Promise<T> {
     const response = await fetch(`${API_BASE}${path}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: await buildHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     });
     return handleResponse<T>(response);
@@ -71,6 +96,7 @@ export const apiClient = {
   async delete<T>(path: string): Promise<T> {
     const response = await fetch(`${API_BASE}${path}`, {
       method: "DELETE",
+      headers: await buildHeaders(),
     });
     return handleResponse<T>(response);
   },
@@ -80,6 +106,7 @@ export const apiClient = {
     formData.append("file", file);
     const response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
+      headers: await buildHeaders(),
       body: formData,
     });
     return handleResponse<T>(response);
@@ -136,6 +163,14 @@ export const apiClient = {
     return this.get<GraphPage>(
       `/investigations/${investigationId}/graph?skip=${skip}&limit=${limit}`
     );
+  },
+
+  getNotebook(investigationId: string) {
+    return this.get<NotebookDocument>(`/investigations/${investigationId}/notebook`);
+  },
+
+  saveNotebook(investigationId: string, payload: NotebookUpdate) {
+    return this.put<NotebookDocument>(`/investigations/${investigationId}/notebook`, payload);
   },
 
   ingestFile(investigationId: string, file: File) {

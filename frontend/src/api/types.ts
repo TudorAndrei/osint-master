@@ -154,3 +154,26 @@ export interface YenteLinkResponse {
   linked_to: string[];
   links_applied: number;
 }
+
+export interface NotebookCanvas {
+  nodes: Array<Record<string, unknown>>;
+  edges: Array<Record<string, unknown>>;
+  viewport: {
+    x: number;
+    y: number;
+    zoom: number;
+  };
+}
+
+export interface NotebookDocument {
+  investigation_id: string;
+  version: number;
+  canvas_doc: NotebookCanvas;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface NotebookUpdate {
+  version: number;
+  canvas_doc: NotebookCanvas;
+}

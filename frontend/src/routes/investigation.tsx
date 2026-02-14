@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import cytoscape, { type Core, type ElementDefinition, type LayoutOptions } from "cytoscape";
 import fcose from "cytoscape-fcose";
-import { Search, Trash2, Upload, X, ZoomIn, ZoomOut, Map as MapIcon, Network } from "lucide-react";
-import { apiClient, ApiError } from "@/api/client";
+import {
+  Network,
+  Notebook,
+  Map as MapIcon,
+  Search,
+  Trash2,
+  Upload,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
+import { apiClient, ApiError, buildAuthHeaders } from "@/api/client";
 import { Button } from "@/components/ui/button";
 import type {
   DuplicateCandidate,
@@ -16,30 +28,32 @@ import type {
   YenteSearchResult,
 } from "@/api/types";
 import EntityMap from "@/components/investigation/EntityMap";
+import InvestigationChatbot from "@/components/investigation/InvestigationChatbot";
+import NotebookCanvas from "@/components/investigation/NotebookCanvas";
 
 cytoscape.use(fcose);
 
 const FCOSE_OPTIONS = {
   name: "fcose",
   quality: "proof",
-  randomize: false,
+  randomize: true,
   animate: true,
-  animationDuration: 1000,
+  animationDuration: 650,
   fit: true,
-  padding: 30,
+  padding: 48,
   nodeDimensionsIncludeLabels: true,
   uniformNodeDimensions: false,
   packComponents: true,
   step: "all",
   samplingType: true,
   sampleSize: 25,
-  nodeRepulsion: () => 6500,
-  idealEdgeLength: () => 100,
-  edgeElasticity: () => 0.45,
+  nodeRepulsion: () => 9800,
+  idealEdgeLength: () => 150,
+  edgeElasticity: () => 0.32,
   nestingFactor: 0.1,
-  gravity: 0.1,
+  gravity: 0.06,
   numIter: 2500,
-  tile: true,
+  tile: false,
   tilingPaddingVertical: 10,
   tilingPaddingHorizontal: 10,
   gravityRangeCompound: 1.5,
@@ -97,6 +111,13 @@ const SUPPORTED_UPLOAD_ACCEPT = [
   ...SUPPORTED_UPLOAD_GROUPS.documents,
 ].join(",");
 
+const CHAT_SUGGESTIONS = [
+  "Summarize this investigation in 5 bullets",
+  "Who are the key people and companies here?",
+  "Show strongest relationships around the selected entity",
+  "List likely duplicate entities I should review",
+];
+
 function schemaIconDataUri(schema: string): string {
   const svg =
     SCHEMA_ICON_SVG[schema] ||
@@ -110,6 +131,20 @@ function nodeLabel(node: GraphNode): string {
 
 function entityLabel(entity: Entity): string {
   return entity.properties.name?.[0] || entity.id;
+}
+
+function edgeLabel(edge: GraphEdge): string {
+  const schema = edge.schema.trim();
+  if (!schema) {
+    return "";
+  }
+
+  const normalized = schema.toUpperCase();
+  if (normalized === "UNKNOWNLINK" || normalized === "RELATED") {
+    return "";
+  }
+
+  return schema;
 }
 
 function mergedProperties(left: Entity, right: Entity): Record<string, string[]> {
@@ -162,7 +197,7 @@ export default function InvestigationPage() {
   const [search, setSearch] = useState("");
   const [schemaFilter, setSchemaFilter] = useState("all");
   const [layout, setLayout] = useState<"fcose" | "grid" | "circle">("fcose");
-  const [viewMode, setViewMode] = useState<"graph" | "map">("graph");
+  const [viewMode, setViewMode] = useState<"graph" | "map" | "notebook">("graph");
   const [dragActive, setDragActive] = useState(false);
   const [yenteQuery, setYenteQuery] = useState("");
   const [yenteResults, setYenteResults] = useState<YenteSearchResult[]>([]);
@@ -177,6 +212,7 @@ export default function InvestigationPage() {
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const [activeCandidate, setActiveCandidate] = useState<DuplicateCandidate | null>(null);
   const [mergeTargetId, setMergeTargetId] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState("");
 
   const graphQuery = useQuery({
     queryKey: ["graph", id],
@@ -187,6 +223,29 @@ export default function InvestigationPage() {
   const schemataQuery = useQuery({
     queryKey: ["schemata"],
     queryFn: () => apiClient.listSchemata(),
+  });
+
+  const {
+    messages: chatMessages,
+    sendMessage,
+    status: chatStatus,
+    error: chatError,
+    stop: stopChat,
+  } = useChat({
+    id: id ? `investigation-${id}` : "investigation",
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: () => ({
+        investigationId: id,
+      }),
+      fetch: async (input, init) => {
+        const headers = await buildAuthHeaders(init?.headers);
+        return fetch(input, {
+          ...init,
+          headers,
+        });
+      },
+    }),
   });
 
   const expandMutation = useMutation({
@@ -396,6 +455,10 @@ export default function InvestigationPage() {
 
   const selectedEntity = useMemo(() => nodes.find((node) => node.id === selectedEntityId), [nodes, selectedEntityId]);
   const existingEntityIds = useMemo(() => new Set(nodes.map((node) => node.id)), [nodes]);
+  const investigationEntities = useMemo(
+    () => nodes.map((node) => ({ id: node.id, label: nodeLabel(node), schema: node.schema })),
+    [nodes]
+  );
 
   useEffect(() => {
     if (viewMode !== "graph") {
@@ -421,7 +484,8 @@ export default function InvestigationPage() {
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          label: edge.schema,
+          label: edgeLabel(edge),
+          weak: edge.schema.toUpperCase() === "UNKNOWNLINK" || edge.schema.toUpperCase() === "RELATED" ? 1 : 0,
         },
       })),
     ];
@@ -478,10 +542,20 @@ export default function InvestigationPage() {
               "text-background-opacity": 0.75,
               "text-background-padding": "2px",
               "text-background-shape": "roundrectangle",
+              "text-margin-y": -6,
+              "text-rotation": "autorotate",
+            },
+          },
+          {
+            selector: "edge[weak = 1]",
+            style: {
+              "line-style": "dashed",
+              opacity: 0.6,
+              "target-arrow-shape": "none",
             },
           },
         ],
-      });
+        });
 
       cy.on("tap", "node", (event) => {
         setSelectedEntityId(event.target.id());
@@ -499,7 +573,9 @@ export default function InvestigationPage() {
       return;
     }
     const layoutOptions: LayoutOptions =
-      layout === "fcose" ? FCOSE_OPTIONS : { name: layout, animate: true, fit: true, padding: 40 };
+      layout === "fcose"
+        ? ({ ...FCOSE_OPTIONS, animate: visibleNodes.length < 220 } as LayoutOptions)
+        : ({ name: layout, animate: true, fit: true, padding: 40 } as LayoutOptions);
     cy.layout(layoutOptions).run();
   }, [layout, visibleEdges, visibleNodes, viewMode]);
 
@@ -564,9 +640,25 @@ export default function InvestigationPage() {
     yenteSearchMutation.mutate();
   };
 
+  const onSubmitChat = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || !id || chatStatus !== "ready") {
+      return;
+    }
+    await sendMessage({ text: trimmed });
+    setChatInput("");
+  };
+
+  const sendSuggestion = async (text: string) => {
+    if (!id || chatStatus !== "ready") {
+      return;
+    }
+    await sendMessage({ text });
+  };
+
   return (
     <div className="flex h-[calc(100vh-3.5rem)] min-h-[560px] flex-col gap-4 lg:flex-row">
-      <div className="flex min-w-0 flex-1 flex-col gap-3 rounded-lg border bg-background/70 p-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-3 rounded-lg border bg-background/70 p-3 lg:order-2">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -620,6 +712,15 @@ export default function InvestigationPage() {
               <MapIcon className="mr-2 h-3.5 w-3.5" />
               Map
             </Button>
+            <Button
+              variant={viewMode === "notebook" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-3 text-xs"
+              onClick={() => setViewMode("notebook")}
+            >
+              <Notebook className="mr-2 h-3.5 w-3.5" />
+              Notebook
+            </Button>
           </div>
 
           <Button
@@ -652,6 +753,17 @@ export default function InvestigationPage() {
             nodes={visibleNodes}
             onSelect={setSelectedEntityId}
             selectedEntityId={selectedEntityId}
+          />
+        ) : null}
+
+        {viewMode === "notebook" && id ? (
+          <NotebookCanvas
+            investigationId={id}
+            entities={investigationEntities}
+            onRevealEntity={(entityId) => {
+              setSelectedEntityId(entityId);
+              setViewMode("graph");
+            }}
           />
         ) : null}
 
@@ -712,7 +824,7 @@ export default function InvestigationPage() {
         ) : null}
       </div>
 
-      <div className="w-full space-y-3 lg:w-96">
+      <div className="w-full space-y-3 lg:order-1 lg:w-96">
         <div className="rounded-lg border bg-card p-4">
           <h2 className="font-semibold">Entity Details</h2>
           {selectedEntity ? (
@@ -930,6 +1042,21 @@ export default function InvestigationPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="w-full lg:order-3 lg:w-96">
+        <InvestigationChatbot
+          error={chatError}
+          input={chatInput}
+          investigationId={id}
+          messages={chatMessages}
+          onInputChange={setChatInput}
+          onSendMessage={onSubmitChat}
+          onSendSuggestion={sendSuggestion}
+          onStop={stopChat}
+          status={chatStatus}
+          suggestions={CHAT_SUGGESTIONS}
+        />
       </div>
 
       {activeCandidate ? (
