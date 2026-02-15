@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+  "prek>=0.3.2",
   "pytest>=8.0.0",
   "pytest-asyncio>=0.24.0",
   "httpx>=0.27.0",
@@ -51,9 +52,22 @@ include = ["app/**/*.py"]
 select = ["ALL"]
 ignore = ["D", "COM812"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+  "ANN",
+  "ARG002",
+  "EM",
+  "PLR2004",
+  "PLC0415",
+  "S",
+  "SLF001",
+  "TC003",
+  "TRY003",
+]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
 [dependency-groups]
-dev = ["httpx>=0.28.1", "pytest>=9.0.2", "testcontainers>=4.9.2"]
+dev = ["httpx>=0.28.1", "prek>=0.3.2", "pytest>=9.0.2", "testcontainers>=4.9.2"]

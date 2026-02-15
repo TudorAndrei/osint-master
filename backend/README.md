@@ -9,6 +9,13 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
+Install and run git hooks with prek:
+
+```bash
+uv run prek install
+uv run prek run --all-files
+```
+
 The backend loads environment variables from `backend/.env` and `../.env`.
 For local development with Docker-managed dependencies, run FalkorDB and Yente first:
 

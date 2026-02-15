@@ -101,7 +101,7 @@ def _fixture_bytes(name: str) -> bytes:
 
 def test_ingest_maps_employment_aliases_and_resolves_names() -> None:
     entity_service = FakeEntityService()
-    service = IngestService(entity_service=cast(Any, entity_service))
+    service = IngestService(entity_service=cast("Any", entity_service))
 
     records = [
         {
@@ -137,7 +137,7 @@ def test_ingest_maps_employment_aliases_and_resolves_names() -> None:
 
 def test_ingest_rejects_relations_with_unresolved_endpoints() -> None:
     entity_service = FakeEntityService()
-    service = IngestService(entity_service=cast(Any, entity_service))
+    service = IngestService(entity_service=cast("Any", entity_service))
 
     records = [
         {
@@ -159,7 +159,7 @@ def test_ingest_rejects_relations_with_unresolved_endpoints() -> None:
 
 def test_ingest_sec_excerpt_fixture_end_to_end_relations() -> None:
     entity_service = FakeEntityService()
-    service = IngestService(entity_service=cast(Any, entity_service))
+    service = IngestService(entity_service=cast("Any", entity_service))
 
     content = _fixture_bytes("sec_excerpt_amazon_item13_entities.ndjson")
     result = service.ingest_file("inv-sec", "sec_excerpt_amazon_item13_entities.ndjson", content)
