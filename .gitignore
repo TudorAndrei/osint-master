@@ -216,6 +216,7 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+!backend/.pre-commit-config.yaml
 
 # ===================
 # Frontend (Bun/Node)
